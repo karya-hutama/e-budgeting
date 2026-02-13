@@ -35,20 +35,24 @@ const LimitBudgetView: React.FC<Props> = ({ depts, limits, setLimits, showToast 
   const formatMonthName = (monthStr: string) => {
     if (!monthStr) return '-';
     try {
-      // Menangani format ISO (2025-01-31T...) atau YYYY-MM
-      const date = new Date(monthStr);
-      if (!isNaN(date.getTime())) {
-        return new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(date);
-      }
-      
-      // Fallback jika format string YYYY-MM manual
+      // Pecah string YYYY-MM untuk menghindari pergeseran zona waktu
       const parts = monthStr.split('-');
       if (parts.length >= 2) {
         const year = parseInt(parts[0]);
         const month = parseInt(parts[1]);
-        const d = new Date(year, month - 1);
+        // Gunakan tanggal 15 agar aman dari pergeseran jam zona waktu manapun
+        const d = new Date(year, month - 1, 15);
         return new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(d);
       }
+      
+      // Jika formatnya ISO (fallback)
+      const date = new Date(monthStr);
+      if (!isNaN(date.getTime())) {
+        // Tambahkan 12 jam untuk keamanan
+        date.setHours(date.getHours() + 12);
+        return new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(date);
+      }
+      
       return monthStr;
     } catch (e) {
       return monthStr;

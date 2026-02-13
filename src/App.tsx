@@ -34,7 +34,7 @@ const MASTER_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzEFtvomi_6U
 
 const INITIAL_SETTINGS: WebSettings = {
   logoUrl: 'https://img.icons8.com/?size=100&id=7991&format=png&color=f68b1f',
-  siteName: 'E-Budgeting System',
+  siteName: 'E-Budgeting',
   databaseId: '',
   backendUrl: MASTER_BACKEND_URL 
 };
@@ -129,20 +129,28 @@ const App: React.FC = () => {
         setDepartments((data.departments || []).map(normalizeRow));
         setBisnis((data.bisnis || []).map(normalizeRow));
         
-        // Membersihkan format tanggal pada Submissions
+        // Membersihkan format tanggal pada Submissions dengan kompensasi zona waktu
         setSubmissions((data.submissions || []).map((s: any) => {
           const norm = normalizeRow(s);
-          if (norm.date && String(norm.date).includes('T')) {
-            norm.date = String(norm.date).split('T')[0];
+          if (norm.date) {
+            const d = new Date(norm.date);
+            // Tambahkan 12 jam untuk memastikan tanggal tidak bergeser ke hari sebelumnya saat di-parse lokal
+            d.setHours(d.getHours() + 12);
+            norm.date = d.toISOString().split('T')[0];
           }
           return norm;
         }));
 
-        // Membersihkan format bulan pada Limits
+        // Membersihkan format bulan pada Limits dengan kompensasi zona waktu
         setLimits((data.limits || []).map((l: any) => {
           const norm = normalizeRow(l);
-          if (norm.month && String(norm.month).includes('T')) {
-            norm.month = String(norm.month).split('T')[0].substring(0, 7);
+          if (norm.month) {
+            const d = new Date(norm.month);
+            // Tambahkan 12 jam untuk mengompensasi UTC shift
+            d.setHours(d.getHours() + 12);
+            const y = d.getFullYear();
+            const m = (d.getMonth() + 1).toString().padStart(2, '0');
+            norm.month = `${y}-${m}`;
           }
           return norm;
         }));

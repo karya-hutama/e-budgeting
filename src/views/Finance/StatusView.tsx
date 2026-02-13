@@ -15,9 +15,12 @@ const FinanceStatusView: React.FC<Props> = ({ submissions, depts, setSubmissions
   const [search, setSearch] = useState('');
 
   const filteredSubmissions = submissions.filter(s => {
-    const matchStatus = filterStatus === 'ALL' || s.status === filterStatus;
-    const matchSearch = s.note.toLowerCase().includes(search.toLowerCase()) || 
-                       s.location.toLowerCase().includes(search.toLowerCase());
+    // Gunakan normalisasi saat membandingkan untuk keamanan ekstra
+    const submissionStatus = String(s.status || '').trim();
+    const matchStatus = filterStatus === 'ALL' || submissionStatus === filterStatus;
+    
+    const matchSearch = (s.note || '').toLowerCase().includes(search.toLowerCase()) || 
+                       (s.location || '').toLowerCase().includes(search.toLowerCase());
     return matchStatus && matchSearch;
   });
 
@@ -41,7 +44,7 @@ const FinanceStatusView: React.FC<Props> = ({ submissions, depts, setSubmissions
         <div className="flex flex-nowrap overflow-x-auto gap-2 pb-1 w-full md:w-auto custom-scrollbar">
           <button 
             onClick={() => setFilterStatus('ALL')}
-            className={`shrink-0 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${filterStatus === 'ALL' ? 'bg-gray-800 text-white shadow-lg' : 'bg-white border text-gray-600 hover:bg-gray-50'}`}
+            className={`shrink-0 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${filterStatus === 'ALL' ? 'bg-[#f68b1f] text-white shadow-lg' : 'bg-white border text-gray-600 hover:bg-gray-50'}`}
           >
             Semua Data
           </button>
@@ -84,7 +87,6 @@ const FinanceStatusView: React.FC<Props> = ({ submissions, depts, setSubmissions
               {filteredSubmissions.map(s => (
                 <tr key={s.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4">
-                    {/* Format DD/MM/YYYY */}
                     <div className="text-sm font-bold text-gray-900">{s.date.split('T')[0].split('-').reverse().join('/')}</div>
                     <div className="text-[10px] text-[#f68b1f] font-black uppercase">
                       {depts.find(d => d.id === s.departmentId)?.name}

@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+
+import React, { useState, useCallback, useEffect } from 'react';
 import { 
   Role, 
   User, 
@@ -30,10 +31,10 @@ import AccountingSubmissionsView from './views/Accounting/Submissions';
 import DireksiDashboard from './views/Direksi/Dashboard';
 import DireksiSubmissionsView from './views/Direksi/Submissions';
 
-const MASTER_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyVv3Kz_qE9O_w7O-V9Z0_u_X-W/exec';
+const MASTER_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzEFtvomi_6ULoWMfkTYDxjqjw50kcSCW9r12KYj9HFRzqblk19ZlYODl2kOrkVZRDe/exec';
 
 const INITIAL_SETTINGS: WebSettings = {
-  logoUrl: 'https://picsum.photos/200/100',
+  logoUrl: 'https://img.icons8.com/?size=100&id=7991&format=png&color=f68b1f',
   siteName: 'E-Budgeting System',
   databaseId: '',
   backendUrl: MASTER_BACKEND_URL 
@@ -48,6 +49,7 @@ const DEFAULT_ADMIN: User = {
 };
 
 const App: React.FC = () => {
+  // Persistence: Muat user dari localStorage agar tidak logout saat reload
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const savedUser = localStorage.getItem('katara_user');
     return savedUser ? JSON.parse(savedUser) : null;
@@ -96,6 +98,7 @@ const App: React.FC = () => {
         else if (cleanKey === 'departmentid' || cleanKey === 'deptid') newRow.departmentId = row[key];
         else if (cleanKey === 'business' || cleanKey === 'bisnis') newRow.business = row[key];
         else if (cleanKey === 'storeaddress' || cleanKey === 'alamat') newRow.storeAddress = row[key];
+        // Pastikan catatan penolakan terpetakan dengan benar
         else if (cleanKey === 'rejectionnote' || cleanKey === 'alasanpenolakan' || cleanKey === 'catatanpenolakan') newRow.rejectionNote = row[key];
         else newRow[key] = row[key];
       });
@@ -134,18 +137,18 @@ const App: React.FC = () => {
       }
     } catch (e) {
       console.error('Fetch Error:', e);
-      if (!silent) showToast('Gagal sinkronisasi data.', 'error');
+      if (!silent) showToast('Gagal sinkronisasi database.', 'error');
     } finally {
       setIsLoading(false);
       setIsSyncing(false);
     }
   }, [settings.backendUrl, showToast]);
 
-  // Sync berkala setiap 30 detik
+  // Sync data otomatis setiap 30 detik
   useEffect(() => {
     loadDataFromDatabase();
     const interval = setInterval(() => {
-      loadDataFromDatabase(true); // silent update
+      loadDataFromDatabase(true); 
     }, 30000); 
     return () => clearInterval(interval);
   }, [loadDataFromDatabase]);

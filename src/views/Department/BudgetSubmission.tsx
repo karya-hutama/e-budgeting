@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Send, MapPin, Building } from 'lucide-react';
 import { User, Bisnis, BudgetStatus, BudgetSubmission, Department } from '../../types';
@@ -68,9 +67,20 @@ const BudgetSubmissionView: React.FC<Props> = ({ user, depts, bisnis, setSubmiss
             </select>
           </div>
 
-          <input type="number" required value={formData.amount} onChange={e => setFormData({...formData, amount: Number(e.target.value)})} className="w-full p-4 border rounded-xl text-2xl font-black text-[#f68b1f]" />
-          <textarea required rows={4} value={formData.note} onChange={e => setFormData({...formData, note: e.target.value})} className="w-full p-3.5 border rounded-xl" placeholder="Catatan..."></textarea>
-          <button type="submit" className="w-full bg-[#f68b1f] text-white py-4 rounded-2xl font-black flex items-center justify-center gap-2">Kirim Pengajuan</button>
+          <div className="relative">
+            <label className="block text-xs font-black text-gray-400 uppercase mb-1.5">Nominal Pengajuan (Rp)</label>
+            <input 
+              type="number" 
+              required 
+              value={formData.amount === 0 ? '' : formData.amount} 
+              onChange={e => setFormData({...formData, amount: Number(e.target.value)})} 
+              className="w-full p-4 border rounded-xl text-2xl font-black text-[#f68b1f] focus:ring-2 focus:ring-[#f68b1f] outline-none" 
+              placeholder="0"
+            />
+          </div>
+
+          <textarea required rows={4} value={formData.note} onChange={e => setFormData({...formData, note: e.target.value})} className="w-full p-3.5 border rounded-xl" placeholder="Catatan/Keperluan..."></textarea>
+          <button type="submit" className="w-full bg-[#f68b1f] text-white py-4 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-[#d57618] transition shadow-lg active:scale-95">Kirim Pengajuan</button>
         </form>
       </div>
     </div>

@@ -1,6 +1,5 @@
-
-import React, { useState, useEffect } from 'react';
-import { LogOut, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { LogOut, Menu, X, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { User, WebSettings } from '../types';
 import { MENU_ITEMS, ROLE_LABELS } from '../constants';
 
@@ -11,13 +10,18 @@ interface LayoutProps {
   onPathChange: (path: string) => void;
   onLogout: () => void;
   children: React.ReactNode;
+  lastSync?: Date;
+  isSyncing?: boolean;
+  onManualSync?: () => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ user, settings, currentPath, onPathChange, onLogout, children }) => {
+const Layout: React.FC<LayoutProps> = ({ 
+  user, settings, currentPath, onPathChange, onLogout, children,
+  lastSync, isSyncing, onManualSync
+}) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Close mobile sidebar on path change
   const handlePathChange = (path: string) => {
     onPathChange(path);
     setIsMobileOpen(false);
@@ -87,7 +91,6 @@ const Layout: React.FC<LayoutProps> = ({ user, settings, currentPath, onPathChan
 
         {/* Footer Actions */}
         <div className="p-3 border-t border-[#d57618] space-y-2">
-          {/* Collapse Toggle (Desktop Only) */}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="hidden lg:flex w-full items-center gap-4 px-3 py-3 text-white/80 hover:bg-white/10 rounded-xl transition-colors"
@@ -126,13 +129,34 @@ const Layout: React.FC<LayoutProps> = ({ user, settings, currentPath, onPathChan
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block">
-              <div className="text-sm font-bold text-gray-900 leading-none">{user.name}</div>
-              <div className="text-[10px] text-[#f68b1f] font-bold uppercase tracking-wider mt-1">{ROLE_LABELS[user.role]}</div>
+          <div className="flex items-center gap-4 lg:gap-6">
+            {/* Sync Indicator */}
+            <div className="hidden sm:flex flex-col items-end">
+              <div className="flex items-center gap-2">
+                {isSyncing && <RefreshCw size={12} className="text-[#f68b1f] animate-spin" />}
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                  Sync: {lastSync?.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </span>
+              </div>
+              <button 
+                onClick={onManualSync}
+                disabled={isSyncing}
+                className="text-[9px] text-[#f68b1f] font-black hover:underline disabled:opacity-50"
+              >
+                Sync Now
+              </button>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-[#fef3e7] flex items-center justify-center text-[#f68b1f] font-bold border-2 border-white shadow-md">
-              {user.name.charAt(0).toUpperCase()}
+
+            <div className="h-8 w-px bg-gray-200 hidden sm:block"></div>
+
+            <div className="flex items-center gap-3">
+              <div className="text-right hidden sm:block">
+                <div className="text-sm font-bold text-gray-900 leading-none">{user.name}</div>
+                <div className="text-[10px] text-[#f68b1f] font-bold uppercase tracking-wider mt-1">{ROLE_LABELS[user.role]}</div>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-[#fef3e7] flex items-center justify-center text-[#f68b1f] font-bold border-2 border-white shadow-md">
+                {user.name.charAt(0).toUpperCase()}
+              </div>
             </div>
           </div>
         </header>
@@ -140,7 +164,6 @@ const Layout: React.FC<LayoutProps> = ({ user, settings, currentPath, onPathChan
         {/* Content Scrollable Area */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-8 custom-scrollbar">
            <div className="max-w-7xl mx-auto animate-fade-in">
-              {/* Mobile Page Title */}
               <h2 className="lg:hidden font-bold text-gray-800 text-xl mb-6">
                 {menu.find(m => m.path === currentPath)?.label || 'Dashboard'}
               </h2>
@@ -150,19 +173,10 @@ const Layout: React.FC<LayoutProps> = ({ user, settings, currentPath, onPathChan
       </div>
 
       <style>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(0, 0, 0, 0.05);
-          border-radius: 10px;
-        }
-        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-          background: rgba(0, 0, 0, 0.1);
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.05); border-radius: 10px; }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.1); }
       `}</style>
     </div>
   );

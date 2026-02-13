@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { 
   Role, 
@@ -31,10 +30,10 @@ import AccountingSubmissionsView from './views/Accounting/Submissions';
 import DireksiDashboard from './views/Direksi/Dashboard';
 import DireksiSubmissionsView from './views/Direksi/Submissions';
 
-const MASTER_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzEFtvomi_6ULoWMfkTYDxjqjw50kcSCW9r12KYj9HFRzqblk19ZlYODl2kOrkVZRDe/exec';
+const MASTER_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyVv3Kz_qE9O_w7O-V9Z0_u_X-W/exec';
 
 const INITIAL_SETTINGS: WebSettings = {
-  logoUrl: 'https://img.icons8.com/?size=100&id=7991&format=png&color=f68b1f',
+  logoUrl: 'https://picsum.photos/200/100',
   siteName: 'E-Budgeting System',
   databaseId: '',
   backendUrl: MASTER_BACKEND_URL 
@@ -49,7 +48,6 @@ const DEFAULT_ADMIN: User = {
 };
 
 const App: React.FC = () => {
-  // Persistence: Muat user dari localStorage agar tidak logout saat reload
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const savedUser = localStorage.getItem('katara_user');
     return savedUser ? JSON.parse(savedUser) : null;
@@ -98,7 +96,6 @@ const App: React.FC = () => {
         else if (cleanKey === 'departmentid' || cleanKey === 'deptid') newRow.departmentId = row[key];
         else if (cleanKey === 'business' || cleanKey === 'bisnis') newRow.business = row[key];
         else if (cleanKey === 'storeaddress' || cleanKey === 'alamat') newRow.storeAddress = row[key];
-        // Pastikan catatan penolakan terpetakan dengan benar
         else if (cleanKey === 'rejectionnote' || cleanKey === 'alasanpenolakan' || cleanKey === 'catatanpenolakan') newRow.rejectionNote = row[key];
         else newRow[key] = row[key];
       });
@@ -131,8 +128,25 @@ const App: React.FC = () => {
         setUsers(fetchedUsers.length > 0 ? fetchedUsers : [DEFAULT_ADMIN]);
         setDepartments((data.departments || []).map(normalizeRow));
         setBisnis((data.bisnis || []).map(normalizeRow));
-        setSubmissions((data.submissions || []).map(normalizeRow));
-        setLimits((data.limits || []).map(normalizeRow));
+        
+        // Membersihkan format tanggal pada Submissions
+        setSubmissions((data.submissions || []).map((s: any) => {
+          const norm = normalizeRow(s);
+          if (norm.date && String(norm.date).includes('T')) {
+            norm.date = String(norm.date).split('T')[0];
+          }
+          return norm;
+        }));
+
+        // Membersihkan format bulan pada Limits
+        setLimits((data.limits || []).map((l: any) => {
+          const norm = normalizeRow(l);
+          if (norm.month && String(norm.month).includes('T')) {
+            norm.month = String(norm.month).split('T')[0].substring(0, 7);
+          }
+          return norm;
+        }));
+
         setLastSync(new Date());
       }
     } catch (e) {
@@ -144,7 +158,6 @@ const App: React.FC = () => {
     }
   }, [settings.backendUrl, showToast]);
 
-  // Sync data otomatis setiap 30 detik
   useEffect(() => {
     loadDataFromDatabase();
     const interval = setInterval(() => {

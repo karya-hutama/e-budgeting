@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { 
   Role, 
@@ -34,7 +35,7 @@ const MASTER_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzEFtvomi_6U
 
 const INITIAL_SETTINGS: WebSettings = {
   logoUrl: 'https://img.icons8.com/?size=100&id=7991&format=png&color=f68b1f',
-  siteName: 'E-Budgeting',
+  siteName: 'E-Budgeting System',
   databaseId: '',
   backendUrl: MASTER_BACKEND_URL 
 };
@@ -93,6 +94,7 @@ const App: React.FC = () => {
         else if (cleanKey === 'password' || cleanKey === 'pass') newRow.password = row[key];
         else if (cleanKey === 'name' || cleanKey === 'nama') newRow.name = row[key];
         else if (cleanKey === 'role' || cleanKey === 'peran') newRow.role = row[key];
+        else if (cleanKey === 'status' || cleanKey === 'keadaan') newRow.status = row[key];
         else if (cleanKey === 'departmentid' || cleanKey === 'deptid') newRow.departmentId = row[key];
         else if (cleanKey === 'business' || cleanKey === 'bisnis') newRow.business = row[key];
         else if (cleanKey === 'storeaddress' || cleanKey === 'alamat') newRow.storeAddress = row[key];
@@ -100,6 +102,17 @@ const App: React.FC = () => {
         else newRow[key] = row[key];
       });
       return newRow;
+    };
+
+    const mapStatusSmartly = (raw: string): BudgetStatus => {
+      const s = String(raw || '').toLowerCase().trim();
+      if (s.includes('finance') && (s.includes('menunggu') || s.includes('pending'))) return BudgetStatus.PENDING_FINANCE;
+      if (s.includes('direksi') && (s.includes('menunggu') || s.includes('pending'))) return BudgetStatus.PENDING_DIREKSI;
+      if (s.includes('finance') && (s.includes('setuju') || s.includes('approve'))) return BudgetStatus.APPROVED_FINANCE;
+      if (s.includes('direksi') && (s.includes('setuju') || s.includes('approve'))) return BudgetStatus.APPROVED_DIREKSI;
+      if (s.includes('finance') && (s.includes('tolak') || s.includes('reject'))) return BudgetStatus.REJECTED_FINANCE;
+      if (s.includes('direksi') && (s.includes('tolak') || s.includes('reject'))) return BudgetStatus.REJECTED_DIREKSI;
+      return BudgetStatus.PENDING_FINANCE;
     };
 
     const mapRoleSmartly = (rawRole: any): Role => {
@@ -129,24 +142,22 @@ const App: React.FC = () => {
         setDepartments((data.departments || []).map(normalizeRow));
         setBisnis((data.bisnis || []).map(normalizeRow));
         
-        // Membersihkan format tanggal pada Submissions dengan kompensasi zona waktu
         setSubmissions((data.submissions || []).map((s: any) => {
           const norm = normalizeRow(s);
           if (norm.date) {
             const d = new Date(norm.date);
-            // Tambahkan 12 jam untuk memastikan tanggal tidak bergeser ke hari sebelumnya saat di-parse lokal
             d.setHours(d.getHours() + 12);
             norm.date = d.toISOString().split('T')[0];
           }
+          // Paksa normalisasi status agar sesuai Enum
+          norm.status = mapStatusSmartly(norm.status);
           return norm;
         }));
 
-        // Membersihkan format bulan pada Limits dengan kompensasi zona waktu
         setLimits((data.limits || []).map((l: any) => {
           const norm = normalizeRow(l);
           if (norm.month) {
             const d = new Date(norm.month);
-            // Tambahkan 12 jam untuk mengompensasi UTC shift
             d.setHours(d.getHours() + 12);
             const y = d.getFullYear();
             const m = (d.getMonth() + 1).toString().padStart(2, '0');

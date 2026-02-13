@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { 
   Role, 
   User, 
@@ -30,14 +30,11 @@ import AccountingSubmissionsView from './views/Accounting/Submissions';
 import DireksiDashboard from './views/Direksi/Dashboard';
 import DireksiSubmissionsView from './views/Direksi/Submissions';
 
-/**
- * PENTING: Masukkan URL Web App Google Apps Script Anda di sini!
- */
-const MASTER_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzEFtvomi_6ULoWMfkTYDxjqjw50kcSCW9r12KYj9HFRzqblk19ZlYODl2kOrkVZRDe/exec';
+const MASTER_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyVv3Kz_qE9O_w7O-V9Z0_u_X-W/exec';
 
 const INITIAL_SETTINGS: WebSettings = {
-  logoUrl: 'https://img.icons8.com/?size=100&id=7991&format=png&color=f68b1f',
-  siteName: 'E-Budgeting',
+  logoUrl: 'https://picsum.photos/200/100',
+  siteName: 'E-Budgeting System',
   databaseId: '',
   backendUrl: MASTER_BACKEND_URL 
 };
@@ -51,7 +48,6 @@ const DEFAULT_ADMIN: User = {
 };
 
 const App: React.FC = () => {
-  // Persistence: Muat user dari localStorage saat pertama kali buka
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const savedUser = localStorage.getItem('katara_user');
     return savedUser ? JSON.parse(savedUser) : null;
@@ -59,6 +55,8 @@ const App: React.FC = () => {
   
   const [currentPath, setCurrentPath] = useState('dashboard');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState<Date>(new Date());
   
   const [users, setUsers] = useState<User[]>([DEFAULT_ADMIN]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -69,9 +67,7 @@ const App: React.FC = () => {
   const [settings, setSettings] = useState<WebSettings>(() => {
     const saved = localStorage.getItem('katara_settings');
     const parsed = saved ? JSON.parse(saved) : INITIAL_SETTINGS;
-    if (MASTER_BACKEND_URL) {
-      parsed.backendUrl = MASTER_BACKEND_URL;
-    }
+    if (MASTER_BACKEND_URL) parsed.backendUrl = MASTER_BACKEND_URL;
     return parsed;
   });
   
@@ -81,11 +77,12 @@ const App: React.FC = () => {
     setToast({ message, type });
   }, []);
 
-  const loadDataFromDatabase = useCallback(async () => {
+  const loadDataFromDatabase = useCallback(async (silent = false) => {
     const targetUrl = settings.backendUrl || MASTER_BACKEND_URL;
     if (!targetUrl) return;
 
-    setIsLoading(true);
+    if (!silent) setIsLoading(true);
+    setIsSyncing(true);
     
     const normalizeRow = (row: any) => {
       const newRow: any = {};
@@ -133,17 +130,24 @@ const App: React.FC = () => {
         setBisnis((data.bisnis || []).map(normalizeRow));
         setSubmissions((data.submissions || []).map(normalizeRow));
         setLimits((data.limits || []).map(normalizeRow));
+        setLastSync(new Date());
       }
     } catch (e) {
       console.error('Fetch Error:', e);
-      showToast('Koneksi database gagal.', 'error');
+      if (!silent) showToast('Gagal sinkronisasi data.', 'error');
     } finally {
       setIsLoading(false);
+      setIsSyncing(false);
     }
   }, [settings.backendUrl, showToast]);
 
+  // Sync berkala setiap 30 detik
   useEffect(() => {
     loadDataFromDatabase();
+    const interval = setInterval(() => {
+      loadDataFromDatabase(true); // silent update
+    }, 30000); 
+    return () => clearInterval(interval);
   }, [loadDataFromDatabase]);
 
   const handleSetUsers = async (newUsers: React.SetStateAction<User[]>) => {
@@ -175,7 +179,7 @@ const App: React.FC = () => {
     localStorage.setItem('katara_settings', JSON.stringify(newSettings));
     if (newSettings.backendUrl) {
       api.saveData(newSettings.backendUrl, 'Settings', newSettings);
-      showToast('Pengaturan disimpan secara Global');
+      showToast('Pengaturan disimpan');
       loadDataFromDatabase();
     }
   };
@@ -231,13 +235,22 @@ const App: React.FC = () => {
       {isLoading && !currentUser && (
         <div className="fixed inset-0 bg-white z-[200] flex flex-col items-center justify-center">
           <div className="w-12 h-12 border-4 border-[#f68b1f] border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="text-[#f68b1f] font-bold animate-pulse uppercase tracking-widest text-xs">Memuat Database...</p>
+          <p className="text-[#f68b1f] font-bold animate-pulse uppercase tracking-widest text-xs">Menghubungkan Database...</p>
         </div>
       )}
       {!currentUser ? (
         <Login users={users} depts={departments} bisnis={bisnis} settings={settings} onLogin={handleLogin} />
       ) : (
-        <Layout user={currentUser} settings={settings} currentPath={currentPath} onPathChange={setCurrentPath} onLogout={handleLogout}>
+        <Layout 
+          user={currentUser} 
+          settings={settings} 
+          currentPath={currentPath} 
+          onPathChange={setCurrentPath} 
+          onLogout={handleLogout}
+          lastSync={lastSync}
+          isSyncing={isSyncing}
+          onManualSync={() => loadDataFromDatabase(true)}
+        >
           {renderView()}
         </Layout>
       )}

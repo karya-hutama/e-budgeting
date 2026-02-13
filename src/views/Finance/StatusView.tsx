@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Undo2, Search } from 'lucide-react';
 import { BudgetSubmission, Department, BudgetStatus } from '../../types';
@@ -15,7 +14,7 @@ const FinanceStatusView: React.FC<Props> = ({ submissions, depts, setSubmissions
   const [search, setSearch] = useState('');
 
   const filteredSubmissions = submissions.filter(s => {
-    // Gunakan normalisasi saat membandingkan untuk keamanan ekstra
+    // Memastikan perbandingan status menggunakan nilai yang sudah dibersihkan
     const submissionStatus = String(s.status || '').trim();
     const matchStatus = filterStatus === 'ALL' || submissionStatus === filterStatus;
     
@@ -127,7 +126,7 @@ const FinanceStatusView: React.FC<Props> = ({ submissions, depts, setSubmissions
               {filteredSubmissions.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-6 py-16 text-center text-gray-400 italic">
-                    Data tidak ditemukan.
+                    Data tidak ditemukan untuk kategori ini.
                   </td>
                 </tr>
               )}

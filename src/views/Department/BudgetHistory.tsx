@@ -71,16 +71,15 @@ const BudgetHistoryView: React.FC<Props> = ({ user, submissions, setSubmissions,
             {filteredSubmissions.map(s => (
               <tr key={s.id} className="hover:bg-gray-50/80 group transition-colors">
                 <td className="px-6 py-4">
-                  {/* Format DD/MM/YYYY */}
                   <div className="text-sm font-bold text-gray-900">{s.date.split('T')[0].split('-').reverse().join('/')}</div>
                   <div className="text-[10px] text-[#f68b1f] font-bold uppercase tracking-wider">{s.business}</div>
                 </td>
                 <td className="px-6 py-4">
                   <p className="text-sm text-gray-600 line-clamp-2 max-w-xs">{s.note}</p>
-                  {s.rejectionNote && (
+                  {(s.rejectionNote && s.rejectionNote.trim() !== "") && (
                     <div className="mt-2 text-[10px] p-2 bg-red-50 text-red-600 rounded-lg border border-red-100 flex items-start gap-1">
                       <AlertCircle size={12} className="mt-0.5 shrink-0" />
-                      <span><b>Alasan:</b> {s.rejectionNote}</span>
+                      <span><b>Alasan Penolakan:</b> {s.rejectionNote}</span>
                     </div>
                   )}
                 </td>

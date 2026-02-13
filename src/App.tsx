@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { 
   Role, 
@@ -35,7 +34,7 @@ const MASTER_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzEFtvomi_6U
 
 const INITIAL_SETTINGS: WebSettings = {
   logoUrl: 'https://img.icons8.com/?size=100&id=7991&format=png&color=f68b1f',
-  siteName: 'E-Budgeting System',
+  siteName: 'E-Budgeting',
   databaseId: '',
   backendUrl: MASTER_BACKEND_URL 
 };
@@ -94,7 +93,7 @@ const App: React.FC = () => {
         else if (cleanKey === 'password' || cleanKey === 'pass') newRow.password = row[key];
         else if (cleanKey === 'name' || cleanKey === 'nama') newRow.name = row[key];
         else if (cleanKey === 'role' || cleanKey === 'peran') newRow.role = row[key];
-        else if (cleanKey === 'status' || cleanKey === 'keadaan') newRow.status = row[key];
+        else if (cleanKey === 'status') newRow.status = row[key];
         else if (cleanKey === 'departmentid' || cleanKey === 'deptid') newRow.departmentId = row[key];
         else if (cleanKey === 'business' || cleanKey === 'bisnis') newRow.business = row[key];
         else if (cleanKey === 'storeaddress' || cleanKey === 'alamat') newRow.storeAddress = row[key];
@@ -104,14 +103,18 @@ const App: React.FC = () => {
       return newRow;
     };
 
-    const mapStatusSmartly = (raw: string): BudgetStatus => {
+    const mapStatusSmartly = (raw: any): BudgetStatus => {
       const s = String(raw || '').toLowerCase().trim();
-      if (s.includes('finance') && (s.includes('menunggu') || s.includes('pending'))) return BudgetStatus.PENDING_FINANCE;
-      if (s.includes('direksi') && (s.includes('menunggu') || s.includes('pending'))) return BudgetStatus.PENDING_DIREKSI;
-      if (s.includes('finance') && (s.includes('setuju') || s.includes('approve'))) return BudgetStatus.APPROVED_FINANCE;
-      if (s.includes('direksi') && (s.includes('setuju') || s.includes('approve'))) return BudgetStatus.APPROVED_DIREKSI;
-      if (s.includes('finance') && (s.includes('tolak') || s.includes('reject'))) return BudgetStatus.REJECTED_FINANCE;
-      if (s.includes('direksi') && (s.includes('tolak') || s.includes('reject'))) return BudgetStatus.REJECTED_DIREKSI;
+      // Deteksi Rejection
+      if (s.includes('tolak') || s.includes('reject')) {
+        return s.includes('direksi') ? BudgetStatus.REJECTED_DIREKSI : BudgetStatus.REJECTED_FINANCE;
+      }
+      // Deteksi Approval
+      if (s.includes('setuju') || s.includes('approve') || s.includes('acc')) {
+        return s.includes('direksi') ? BudgetStatus.APPROVED_DIREKSI : BudgetStatus.APPROVED_FINANCE;
+      }
+      // Deteksi Pending
+      if (s.includes('direksi')) return BudgetStatus.PENDING_DIREKSI;
       return BudgetStatus.PENDING_FINANCE;
     };
 
@@ -146,10 +149,9 @@ const App: React.FC = () => {
           const norm = normalizeRow(s);
           if (norm.date) {
             const d = new Date(norm.date);
-            d.setHours(d.getHours() + 12);
+            d.setHours(d.getHours() + 12); // Kompensasi UTC shift
             norm.date = d.toISOString().split('T')[0];
           }
-          // Paksa normalisasi status agar sesuai Enum
           norm.status = mapStatusSmartly(norm.status);
           return norm;
         }));

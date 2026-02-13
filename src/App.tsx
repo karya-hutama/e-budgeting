@@ -30,10 +30,10 @@ import AccountingSubmissionsView from './views/Accounting/Submissions';
 import DireksiDashboard from './views/Direksi/Dashboard';
 import DireksiSubmissionsView from './views/Direksi/Submissions';
 
-const MASTER_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyVv3Kz_qE9O_w7O-V9Z0_u_X-W/exec';
+const MASTER_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzEFtvomi_6ULoWMfkTYDxjqjw50kcSCW9r12KYj9HFRzqblk19ZlYODl2kOrkVZRDe/exec';
 
 const INITIAL_SETTINGS: WebSettings = {
-  logoUrl: 'https://picsum.photos/200/100',
+  logoUrl: 'https://img.icons8.com/?size=100&id=7991&format=png&color=f68b1f',
   siteName: 'E-Budgeting System',
   databaseId: '',
   backendUrl: MASTER_BACKEND_URL 

@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { 
   Role, 
@@ -31,11 +30,17 @@ import AccountingSubmissionsView from './views/Accounting/Submissions';
 import DireksiDashboard from './views/Direksi/Dashboard';
 import DireksiSubmissionsView from './views/Direksi/Submissions';
 
+/**
+ * PENTING: Masukkan URL Web App Google Apps Script Anda di sini!
+ * Ini akan memastikan semua user otomatis terhubung ke database yang sama.
+ */
+const MASTER_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyVv3Kz_qE9O_w7O-V9Z0_u_X-W/exec'; // GANTI DENGAN URL ANDA
+
 const INITIAL_SETTINGS: WebSettings = {
   logoUrl: 'https://picsum.photos/200/100',
-  siteName: 'Katara Budget System',
+  siteName: 'E-Budgeting System',
   databaseId: '',
-  backendUrl: ''
+  backendUrl: MASTER_BACKEND_URL 
 };
 
 const DEFAULT_ADMIN: User = {
@@ -56,9 +61,15 @@ const App: React.FC = () => {
   const [bisnis, setBisnis] = useState<Bisnis[]>([]);
   const [submissions, setSubmissions] = useState<BudgetSubmission[]>([]);
   const [limits, setLimits] = useState<BudgetLimit[]>([]);
+  
   const [settings, setSettings] = useState<WebSettings>(() => {
     const saved = localStorage.getItem('katara_settings');
-    return saved ? JSON.parse(saved) : INITIAL_SETTINGS;
+    const parsed = saved ? JSON.parse(saved) : INITIAL_SETTINGS;
+    // Selalu paksa gunakan MASTER_BACKEND_URL jika tersedia
+    if (MASTER_BACKEND_URL) {
+      parsed.backendUrl = MASTER_BACKEND_URL;
+    }
+    return parsed;
   });
   
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
@@ -68,144 +79,65 @@ const App: React.FC = () => {
   }, []);
 
   const loadDataFromDatabase = useCallback(async () => {
-    if (!settings.backendUrl) return;
+    const targetUrl = settings.backendUrl || MASTER_BACKEND_URL;
+    if (!targetUrl) return;
+
     setIsLoading(true);
     
-    // --- UTILITY: Normalisasi Header Kolom ---
     const normalizeRow = (row: any) => {
       const newRow: any = {};
       Object.keys(row).forEach(key => {
         const cleanKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
-        
         if (cleanKey === 'id') newRow.id = row[key];
-        else if (cleanKey === 'username' || cleanKey === 'user' || cleanKey === 'pengguna') newRow.username = row[key];
-        else if (cleanKey === 'password' || cleanKey === 'pass' || cleanKey === 'sandi' || cleanKey === 'katasandi') newRow.password = row[key];
-        else if (cleanKey === 'name' || cleanKey === 'nama' || cleanKey === 'fullname') newRow.name = row[key];
-        else if (cleanKey === 'role' || cleanKey === 'peran' || cleanKey === 'jabatan' || cleanKey === 'akses') newRow.role = row[key];
-        else if (cleanKey === 'departmentid' || cleanKey === 'deptid' || cleanKey === 'iddept' || cleanKey === 'department') newRow.departmentId = row[key];
-        else if (cleanKey === 'business' || cleanKey === 'bisnis' || cleanKey === 'unitbisnis') newRow.business = row[key];
-        else if (cleanKey === 'storeaddress' || cleanKey === 'alamat' || cleanKey === 'lokasi') newRow.storeAddress = row[key];
+        else if (cleanKey === 'username' || cleanKey === 'user') newRow.username = row[key];
+        else if (cleanKey === 'password' || cleanKey === 'pass') newRow.password = row[key];
+        else if (cleanKey === 'name' || cleanKey === 'nama') newRow.name = row[key];
+        else if (cleanKey === 'role' || cleanKey === 'peran') newRow.role = row[key];
+        else if (cleanKey === 'departmentid' || cleanKey === 'deptid') newRow.departmentId = row[key];
+        else if (cleanKey === 'business' || cleanKey === 'bisnis') newRow.business = row[key];
+        else if (cleanKey === 'storeaddress' || cleanKey === 'alamat') newRow.storeAddress = row[key];
         else newRow[key] = row[key];
       });
       return newRow;
     };
 
-    // --- UTILITY: Mapping Role Cerdas ---
     const mapRoleSmartly = (rawRole: any): Role => {
       const r = String(rawRole || '').toLowerCase().trim();
       if (r.includes('super') || r === 'admin') return Role.SUPER_ADMIN;
-      if (r.includes('finance') || r.includes('keuangan') || r.includes('finansial')) return Role.FINANCE;
-      if (r.includes('account') || r.includes('akuntansi') || r.includes('pembukuan')) return Role.ACCOUNTING;
-      if (r.includes('direk') || r.includes('director') || r.includes('pimpinan') || r.includes('bos') || r.includes('ceo')) return Role.DIREKSI;
-      // Default ke Department
+      if (r.includes('finance') || r.includes('keuangan')) return Role.FINANCE;
+      if (r.includes('account') || r.includes('akuntansi')) return Role.ACCOUNTING;
+      if (r.includes('direk') || r.includes('ceo')) return Role.DIREKSI;
       return Role.DEPARTMENT;
     };
 
     try {
-      const data = await api.fetchAllData(settings.backendUrl);
+      const data = await api.fetchAllData(targetUrl);
       if (data) {
-        // --- PROSES USERS ---
-        const fetchedUsers = (data.users || [])
-          .map((u: any) => {
-            const norm = normalizeRow(u);
-            if (!norm.username) return null;
-
-            return {
-              ...u, 
-              ...norm, 
-              // ID fallback ke username jika kosong
-              id: norm.id ? String(norm.id) : `manual-${norm.username}`,
-              // Ensure empty string if undefined/null
-              departmentId: norm.departmentId ? String(norm.departmentId).trim() : '', 
-              business: norm.business ? String(norm.business).trim() : '',
-              role: mapRoleSmartly(norm.role),
-              username: String(norm.username).trim(),
-              password: norm.password ? String(norm.password).trim() : ''
-            };
-          })
-          .filter(Boolean);
-
-        // --- PROSES DEPARTMENTS ---
-        const fetchedDepts = (data.departments || [])
-          .map((d: any) => {
-            const norm = normalizeRow(d);
-            if (!norm.name) return null;
-            return {
-              ...d,
-              ...norm,
-              id: String(norm.id || d.id).trim(),
-              name: String(norm.name || d.name).trim()
-            };
-          })
-          .filter(Boolean);
-
-        // --- PROSES BISNIS ---
-        const fetchedBisnis = (data.bisnis || [])
-          .map((b: any) => {
-             const norm = normalizeRow(b);
-             if (!norm.name) return null;
-             return {
-               ...b,
-               ...norm,
-               id: String(norm.id || b.id).trim(),
-               name: String(norm.name || b.name).trim()
-             };
-          })
-          .filter(Boolean);
-        
-        // --- PROSES LIMITS ---
-        const fetchedLimits = (data.limits || []).map((l: any) => {
-          const norm = normalizeRow(l);
-          
-          // Fix format Bulan (Hilangkan ISO time seperti T16:00:00.000Z)
-          let cleanMonth = String(norm.month || l.month).trim();
-          if (cleanMonth.includes('T')) {
-             cleanMonth = cleanMonth.split('T')[0].substring(0, 7); // Ambil YYYY-MM
-          }
-
-          return {
-             ...l,
-             ...norm,
-             id: String(norm.id || l.id),
-             departmentId: String(norm.departmentId || l.departmentId).trim(),
-             month: cleanMonth,
-             limitAmount: Number(norm.limitamount || norm.limitAmount || l.limitAmount || 0)
+        // UPDATE SETTINGS DULU (LOGO & SITE NAME)
+        if (data.settings) {
+          const dbSettings = { 
+            ...settings, 
+            ...data.settings, 
+            backendUrl: targetUrl // Jangan biarkan backendUrl dari DB kosong
           };
-        });
-        
-        // --- PROSES SUBMISSIONS ---
-        const fetchedSubmissions = (data.submissions || []).map((s: any) => {
-             const norm = normalizeRow(s);
-             
-             // Fix format Tanggal (Hilangkan ISO time seperti T16:00:00.000Z)
-             let cleanDate = String(norm.date || s.date || '').trim();
-             if (cleanDate.includes('T')) {
-                 cleanDate = cleanDate.split('T')[0]; // Ambil YYYY-MM-DD
-             }
+          setSettings(dbSettings);
+          localStorage.setItem('katara_settings', JSON.stringify(dbSettings));
+        }
 
-             return {
-                 ...s,
-                 ...norm,
-                 id: String(norm.id || s.id),
-                 amount: Number(norm.amount || s.amount),
-                 departmentId: String(norm.departmentId || s.departmentId).trim(),
-                 date: cleanDate
-             };
-        });
+        const fetchedUsers = (data.users || []).map((u: any) => {
+          const norm = normalizeRow(u);
+          return { ...u, ...norm, role: mapRoleSmartly(norm.role) };
+        }).filter((u: any) => u.username);
 
         setUsers(fetchedUsers.length > 0 ? fetchedUsers : [DEFAULT_ADMIN]);
-        setDepartments(fetchedDepts);
-        setBisnis(fetchedBisnis);
-        setSubmissions(fetchedSubmissions);
-        setLimits(fetchedLimits);
-        
-        if (data.settings && data.settings.backendUrl) {
-           setSettings(prev => ({ ...prev, ...data.settings }));
-        }
+        setDepartments((data.departments || []).map(normalizeRow));
+        setBisnis((data.bisnis || []).map(normalizeRow));
+        setSubmissions((data.submissions || []).map(normalizeRow));
+        setLimits((data.limits || []).map(normalizeRow));
       }
     } catch (e) {
-      console.error(e);
-      showToast('Gagal sinkronisasi dengan database.', 'error');
+      console.error('Fetch Error:', e);
+      showToast('Koneksi database gagal. Periksa URL Apps Script.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -215,7 +147,6 @@ const App: React.FC = () => {
     loadDataFromDatabase();
   }, [loadDataFromDatabase]);
 
-  // Sync Handlers
   const handleSetUsers = async (newUsers: React.SetStateAction<User[]>) => {
     const updated = typeof newUsers === 'function' ? (newUsers as any)(users) : newUsers;
     setUsers(updated);
@@ -245,7 +176,8 @@ const App: React.FC = () => {
     localStorage.setItem('katara_settings', JSON.stringify(newSettings));
     if (newSettings.backendUrl) {
       api.saveData(newSettings.backendUrl, 'Settings', newSettings);
-      showToast('Pengaturan disimpan ke Database');
+      showToast('Pengaturan disimpan secara Global');
+      loadDataFromDatabase();
     }
   };
 
@@ -261,7 +193,6 @@ const App: React.FC = () => {
 
   const renderView = () => {
     if (!currentUser) return null;
-
     switch (currentUser.role) {
       case Role.SUPER_ADMIN:
         if (currentPath === 'dashboard') return <SuperAdminDashboard users={users} depts={departments} />;
@@ -269,13 +200,11 @@ const App: React.FC = () => {
         if (currentPath === 'departments') return <DeptManager depts={departments} setDepts={handleSetDepartments} showToast={showToast} />;
         if (currentPath === 'settings') return <WebSettingsView settings={settings} setSettings={handleSetSettings} showToast={showToast} />;
         break;
-
       case Role.DEPARTMENT:
         if (currentPath === 'dashboard') return <DepartmentDashboard submissions={submissions} limits={limits} user={currentUser} />;
         if (currentPath === 'submit') return <BudgetSubmissionView user={currentUser} depts={departments} bisnis={bisnis} setSubmissions={handleSetSubmissions} showToast={showToast} />;
         if (currentPath === 'history') return <BudgetHistoryView user={currentUser} submissions={submissions} setSubmissions={handleSetSubmissions} showToast={showToast} />;
         break;
-
       case Role.FINANCE:
         if (currentPath === 'dashboard') return <FinanceDashboard submissions={submissions} depts={departments} bisnis={bisnis} />;
         if (currentPath === 'limits') return <LimitBudgetView depts={departments} limits={limits} setLimits={handleSetLimits} showToast={showToast} />;
@@ -283,13 +212,11 @@ const App: React.FC = () => {
         if (currentPath === 'status') return <FinanceStatusView submissions={submissions} depts={departments} setSubmissions={handleSetSubmissions} showToast={showToast} />;
         if (currentPath === 'reports') return <ReportsView submissions={submissions} depts={departments} />;
         break;
-
       case Role.ACCOUNTING:
         if (currentPath === 'dashboard') return <AccountingDashboard submissions={submissions} user={currentUser} />;
         if (currentPath === 'submissions') return <AccountingSubmissionsView submissions={submissions} user={currentUser} depts={departments} />;
         if (currentPath === 'reports') return <ReportsView submissions={submissions} depts={departments} filterBusiness={currentUser.business} />;
         break;
-
       case Role.DIREKSI:
         if (currentPath === 'dashboard') return <DireksiDashboard submissions={submissions} limits={limits} />;
         if (currentPath === 'submissions') return <DireksiSubmissionsView submissions={submissions} setSubmissions={handleSetSubmissions} depts={departments} showToast={showToast} />;
@@ -300,8 +227,19 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {isLoading && <div className="fixed inset-0 bg-white/80 z-[200] flex flex-col items-center justify-center backdrop-blur-sm"><div className="w-12 h-12 border-4 border-[#f68b1f] border-t-transparent rounded-full animate-spin mb-4"></div></div>}
-      {!currentUser ? <Login users={users} depts={departments} bisnis={bisnis} settings={settings} onLogin={handleLogin} /> : <Layout user={currentUser} settings={settings} currentPath={currentPath} onPathChange={setCurrentPath} onLogout={handleLogout}>{renderView()}</Layout>}
+      {isLoading && !currentUser && (
+        <div className="fixed inset-0 bg-white z-[200] flex flex-col items-center justify-center">
+          <div className="w-12 h-12 border-4 border-[#f68b1f] border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-[#f68b1f] font-bold animate-pulse uppercase tracking-widest text-xs">Memuat Database...</p>
+        </div>
+      )}
+      {!currentUser ? (
+        <Login users={users} depts={departments} bisnis={bisnis} settings={settings} onLogin={handleLogin} />
+      ) : (
+        <Layout user={currentUser} settings={settings} currentPath={currentPath} onPathChange={setCurrentPath} onLogout={handleLogout}>
+          {renderView()}
+        </Layout>
+      )}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );

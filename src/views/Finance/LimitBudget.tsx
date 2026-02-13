@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { Department, BudgetLimit } from '../../types';
@@ -7,7 +6,6 @@ interface Props {
   depts: Department[];
   limits: BudgetLimit[];
   setLimits: React.Dispatch<React.SetStateAction<BudgetLimit[]>>;
-  // Added showToast prop to Props interface
   showToast: (msg: string, type?: 'success' | 'error' | 'warning') => void;
 }
 
@@ -20,6 +18,9 @@ const LimitBudgetView: React.FC<Props> = ({ depts, limits, setLimits, showToast 
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.limitAmount <= 0) return showToast('Nominal limit tidak valid', 'error');
+    if (!formData.departmentId) return showToast('Pilih departemen', 'error');
+
     const existing = limits.findIndex(l => l.departmentId === formData.departmentId && l.month === formData.month);
     
     if (existing >= 0) {
@@ -27,8 +28,8 @@ const LimitBudgetView: React.FC<Props> = ({ depts, limits, setLimits, showToast 
     } else {
       setLimits(prev => [...prev, { ...formData, id: `limit-${Date.now()}` }]);
     }
-    // Replaced standard alert with showToast
     showToast('Limit budget berhasil diatur.');
+    setFormData(prev => ({ ...prev, limitAmount: 0 }));
   };
 
   return (
@@ -63,12 +64,13 @@ const LimitBudgetView: React.FC<Props> = ({ depts, limits, setLimits, showToast 
             <input 
               type="number" 
               required
-              value={formData.limitAmount} 
+              value={formData.limitAmount === 0 ? '' : formData.limitAmount} 
               onChange={e => setFormData({...formData, limitAmount: Number(e.target.value)})}
               className="w-full p-2 border rounded-lg font-bold text-[#f68b1f] focus:ring-2 focus:ring-[#f68b1f] outline-none" 
+              placeholder="0"
             />
           </div>
-          <button type="submit" className="w-full bg-[#f68b1f] text-white py-3 rounded-xl font-bold hover:bg-[#d57618] shadow-md">
+          <button type="submit" className="w-full bg-[#f68b1f] text-white py-3 rounded-xl font-bold hover:bg-[#d57618] shadow-md transition-all active:scale-95">
             Simpan Limit
           </button>
         </form>
@@ -90,19 +92,22 @@ const LimitBudgetView: React.FC<Props> = ({ depts, limits, setLimits, showToast 
           <tbody className="divide-y divide-gray-100">
             {limits.map(l => (
               <tr key={l.id} className="hover:bg-gray-50">
-                {/* Format MM-YYYY */}
-                <td className="px-6 py-4 text-sm font-bold">{l.month.split('T')[0].split('-').reverse().join('-')}</td>
+                <td className="px-6 py-4 text-sm font-bold">{l.month.split('-').reverse().join('-')}</td>
                 <td className="px-6 py-4 text-sm">{depts.find(d => d.id === l.departmentId)?.name}</td>
                 <td className="px-6 py-4 text-sm font-mono font-bold text-emerald-600">Rp {l.limitAmount.toLocaleString()}</td>
                 <td className="px-6 py-4 text-right">
                   <button onClick={() => {
                     setLimits(limits.filter(item => item.id !== l.id));
-                    // Added toast for limit deletion
                     showToast('Limit budget dihapus', 'warning');
-                  }} className="text-red-600 p-2 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
+                  }} className="text-red-600 p-2 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16} /></button>
                 </td>
               </tr>
             ))}
+            {limits.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-6 py-12 text-center text-gray-400 italic">Belum ada limit yang diatur.</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

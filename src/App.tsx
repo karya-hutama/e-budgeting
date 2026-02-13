@@ -34,10 +34,10 @@ import DireksiSubmissionsView from './views/Direksi/Submissions';
  * PENTING: Masukkan URL Web App Google Apps Script Anda di sini!
  * Ini akan memastikan semua user otomatis terhubung ke database yang sama.
  */
-const MASTER_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyVv3Kz_qE9O_w7O-V9Z0_u_X-W/exec'; // GANTI DENGAN URL ANDA
+const MASTER_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzEFtvomi_6ULoWMfkTYDxjqjw50kcSCW9r12KYj9HFRzqblk19ZlYODl2kOrkVZRDe/exec'; // GANTI DENGAN URL ANDA
 
 const INITIAL_SETTINGS: WebSettings = {
-  logoUrl: 'https://picsum.photos/200/100',
+  logoUrl: 'https://img.icons8.com/?size=100&id=7991&format=png&color=f68b1f',
   siteName: 'E-Budgeting System',
   databaseId: '',
   backendUrl: MASTER_BACKEND_URL 

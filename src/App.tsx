@@ -32,12 +32,11 @@ import DireksiSubmissionsView from './views/Direksi/Submissions';
 
 /**
  * PENTING: Masukkan URL Web App Google Apps Script Anda di sini!
- * Ini akan memastikan semua user otomatis terhubung ke database yang sama.
  */
-const MASTER_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzEFtvomi_6ULoWMfkTYDxjqjw50kcSCW9r12KYj9HFRzqblk19ZlYODl2kOrkVZRDe/exec'; // GANTI DENGAN URL ANDA
+const MASTER_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyVv3Kz_qE9O_w7O-V9Z0_u_X-W/exec';
 
 const INITIAL_SETTINGS: WebSettings = {
-  logoUrl: 'https://img.icons8.com/?size=100&id=7991&format=png&color=f68b1f',
+  logoUrl: 'https://picsum.photos/200/100',
   siteName: 'E-Budgeting System',
   databaseId: '',
   backendUrl: MASTER_BACKEND_URL 
@@ -52,7 +51,12 @@ const DEFAULT_ADMIN: User = {
 };
 
 const App: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // Persistence: Muat user dari localStorage saat pertama kali buka
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const savedUser = localStorage.getItem('katara_user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  
   const [currentPath, setCurrentPath] = useState('dashboard');
   const [isLoading, setIsLoading] = useState(false);
   
@@ -65,7 +69,6 @@ const App: React.FC = () => {
   const [settings, setSettings] = useState<WebSettings>(() => {
     const saved = localStorage.getItem('katara_settings');
     const parsed = saved ? JSON.parse(saved) : INITIAL_SETTINGS;
-    // Selalu paksa gunakan MASTER_BACKEND_URL jika tersedia
     if (MASTER_BACKEND_URL) {
       parsed.backendUrl = MASTER_BACKEND_URL;
     }
@@ -96,6 +99,7 @@ const App: React.FC = () => {
         else if (cleanKey === 'departmentid' || cleanKey === 'deptid') newRow.departmentId = row[key];
         else if (cleanKey === 'business' || cleanKey === 'bisnis') newRow.business = row[key];
         else if (cleanKey === 'storeaddress' || cleanKey === 'alamat') newRow.storeAddress = row[key];
+        else if (cleanKey === 'rejectionnote' || cleanKey === 'alasanpenolakan' || cleanKey === 'catatanpenolakan') newRow.rejectionNote = row[key];
         else newRow[key] = row[key];
       });
       return newRow;
@@ -113,13 +117,8 @@ const App: React.FC = () => {
     try {
       const data = await api.fetchAllData(targetUrl);
       if (data) {
-        // UPDATE SETTINGS DULU (LOGO & SITE NAME)
         if (data.settings) {
-          const dbSettings = { 
-            ...settings, 
-            ...data.settings, 
-            backendUrl: targetUrl // Jangan biarkan backendUrl dari DB kosong
-          };
+          const dbSettings = { ...settings, ...data.settings, backendUrl: targetUrl };
           setSettings(dbSettings);
           localStorage.setItem('katara_settings', JSON.stringify(dbSettings));
         }
@@ -137,7 +136,7 @@ const App: React.FC = () => {
       }
     } catch (e) {
       console.error('Fetch Error:', e);
-      showToast('Koneksi database gagal. Periksa URL Apps Script.', 'error');
+      showToast('Koneksi database gagal.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -183,11 +182,13 @@ const App: React.FC = () => {
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
+    localStorage.setItem('katara_user', JSON.stringify(user));
     setCurrentPath('dashboard');
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
+    localStorage.removeItem('katara_user');
     setCurrentPath('dashboard');
   };
 

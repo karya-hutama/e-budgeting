@@ -30,11 +30,11 @@ import AccountingSubmissionsView from './views/Accounting/Submissions';
 import DireksiDashboard from './views/Direksi/Dashboard';
 import DireksiSubmissionsView from './views/Direksi/Submissions';
 
-const MASTER_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzEFtvomi_6ULoWMfkTYDxjqjw50kcSCW9r12KYj9HFRzqblk19ZlYODl2kOrkVZRDe/exec';
+const MASTER_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzC_ItkRE_otClUtcs7zQdvIAz55TPSfgAhIkgrlqU-NEp4_Np7rCwkdJyOx_bO90Cp/exec';
 
 const INITIAL_SETTINGS: WebSettings = {
   logoUrl: 'https://img.icons8.com/?size=100&id=7991&format=png&color=f68b1f',
-  siteName: 'E-Budgeting',
+  siteName: 'E-Budgeting System',
   databaseId: '',
   backendUrl: MASTER_BACKEND_URL 
 };
@@ -105,15 +105,12 @@ const App: React.FC = () => {
 
     const mapStatusSmartly = (raw: any): BudgetStatus => {
       const s = String(raw || '').toLowerCase().trim();
-      // Deteksi Rejection
       if (s.includes('tolak') || s.includes('reject')) {
         return s.includes('direksi') ? BudgetStatus.REJECTED_DIREKSI : BudgetStatus.REJECTED_FINANCE;
       }
-      // Deteksi Approval
       if (s.includes('setuju') || s.includes('approve') || s.includes('acc')) {
         return s.includes('direksi') ? BudgetStatus.APPROVED_DIREKSI : BudgetStatus.APPROVED_FINANCE;
       }
-      // Deteksi Pending
       if (s.includes('direksi')) return BudgetStatus.PENDING_DIREKSI;
       return BudgetStatus.PENDING_FINANCE;
     };
@@ -149,10 +146,12 @@ const App: React.FC = () => {
           const norm = normalizeRow(s);
           if (norm.date) {
             const d = new Date(norm.date);
-            d.setHours(d.getHours() + 12); // Kompensasi UTC shift
+            d.setHours(d.getHours() + 12); 
             norm.date = d.toISOString().split('T')[0];
           }
           norm.status = mapStatusSmartly(norm.status);
+          // Pastikan rejectionNote selalu ada sebagai string agar tidak hilang saat save kembali
+          norm.rejectionNote = norm.rejectionNote || "";
           return norm;
         }));
 

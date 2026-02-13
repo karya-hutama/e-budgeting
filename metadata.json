@@ -1,0 +1,8 @@
+{
+  "name": "E-Budget Katara",
+  "description": "Sistem Pengajuan Budget Terintegrasi untuk 4 Bisnis (Mbah Man, Warung Bakso, Katara Frozen Mart, Katara GO) dengan alur persetujuan bertingkat antara Departemen, Finance, Accounting, dan Direksi.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

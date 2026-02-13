@@ -32,6 +32,29 @@ const LimitBudgetView: React.FC<Props> = ({ depts, limits, setLimits, showToast 
     setFormData(prev => ({ ...prev, limitAmount: 0 }));
   };
 
+  const formatMonthName = (monthStr: string) => {
+    if (!monthStr) return '-';
+    try {
+      // Menangani format ISO (2025-01-31T...) atau YYYY-MM
+      const date = new Date(monthStr);
+      if (!isNaN(date.getTime())) {
+        return new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(date);
+      }
+      
+      // Fallback jika format string YYYY-MM manual
+      const parts = monthStr.split('-');
+      if (parts.length >= 2) {
+        const year = parseInt(parts[0]);
+        const month = parseInt(parts[1]);
+        const d = new Date(year, month - 1);
+        return new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(d);
+      }
+      return monthStr;
+    } catch (e) {
+      return monthStr;
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-fit">
@@ -92,7 +115,9 @@ const LimitBudgetView: React.FC<Props> = ({ depts, limits, setLimits, showToast 
           <tbody className="divide-y divide-gray-100">
             {limits.map(l => (
               <tr key={l.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 text-sm font-bold">{l.month.split('-').reverse().join('-')}</td>
+                <td className="px-6 py-4 text-sm font-bold text-gray-800">
+                  {formatMonthName(l.month)}
+                </td>
                 <td className="px-6 py-4 text-sm">{depts.find(d => d.id === l.departmentId)?.name}</td>
                 <td className="px-6 py-4 text-sm font-mono font-bold text-emerald-600">Rp {l.limitAmount.toLocaleString()}</td>
                 <td className="px-6 py-4 text-right">
